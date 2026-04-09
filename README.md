@@ -27,12 +27,14 @@ This project implements a document question-answering system that combines vecto
 
 ## Project Structure
 
+```
 ragapp/
-│── app.py          # RAG pipeline (retrieval, generation, validation)
-│── ui.py           # Streamlit interface
-│── data/           # Input documents
-│── db/             # Vector database (generated locally)
-│── .gitignore
+├── app.py        # RAG pipeline (retrieval, generation, validation)
+├── ui.py         # Streamlit interface
+├── data/         # Input documents
+├── db/           # Vector database (generated locally)
+├── .gitignore
+```
 
 ## Setup Instructions
 
