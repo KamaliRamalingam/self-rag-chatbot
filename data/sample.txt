@@ -1,0 +1,2 @@
+Lennart is a platform that helps companies access their internal knowledge.
+It connects different data sources and generates insights using AI.
