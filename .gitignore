@@ -1,5 +1,20 @@
+# Virtual env
 venv/
+
+# Environment variables
 .env
+
+# Data + vector DB
 data/
 db/
+base_db/
+*.sqlite3
+*.bin
+*.pickle
+
+# Python cache
 __pycache__/
+*.pyc
+
+# OS files
+.DS_Store

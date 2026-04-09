@@ -8,7 +8,6 @@ from langchain_community.document_loaders import (
     UnstructuredHTMLLoader
 )
 from langchain_community.vectorstores import Chroma
-
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -30,16 +29,15 @@ embeddings = OpenAIEmbeddings()
 llm = ChatOpenAI(temperature=0)
 
 # ===============================
-# LOAD OR BUILD VECTOR DB
+# VECTORSTORE LOADER (FIX)
 # ===============================
-if os.path.exists(DB_PATH):
-    print("⚡ Loading existing vector database...")
-    vectorstore = Chroma(
-        persist_directory=DB_PATH,
-        embedding_function=embeddings
-    )
-else:
-    print("📥 Building vector database (first time only)...")
+def get_vectorstore():
+
+    if os.path.exists(DB_PATH):
+        return Chroma(
+            persist_directory=DB_PATH,
+            embedding_function=embeddings
+        )
 
     documents = []
 
@@ -57,21 +55,15 @@ else:
         else:
             continue
 
-        docs = loader.load()
-        documents.extend(docs)
+        documents.extend(loader.load())
 
-        print(f"Loaded file: {file}")
-
-    # Split
-    text_splitter = RecursiveCharacterTextSplitter(
+    splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=50
     )
-    docs = text_splitter.split_documents(documents)
 
-    print(f"\nTotal chunks created: {len(docs)}")
+    docs = splitter.split_documents(documents)
 
-    # Create DB
     vectorstore = Chroma.from_documents(
         docs,
         embeddings,
@@ -79,146 +71,137 @@ else:
     )
     vectorstore.persist()
 
-    print("✅ Vector database created.")
+    return vectorstore
+
 
 # ===============================
-# SELF-RAG QUERY
+# MAIN FUNCTION
 # ===============================
-query = input("\nAsk a question: ")
+def ask_question(query):
 
-max_attempts = 3
-all_answers = []
-final_docs = []
-is_grounded = False  # 🔥 IMPORTANT FIX
+    vectorstore = get_vectorstore()  # 🔥 FIX
 
-# ===============================
-# SELF-RAG LOOP
-# ===============================
-for attempt in range(max_attempts):
-    print(f"\n🔁 Attempt {attempt + 1}")
+    max_attempts = 3
+    all_answers = []
+    final_docs = []
+    final_answer = ""
+    is_grounded = False
 
-    retriever = vectorstore.as_retriever(
-        search_kwargs={"k": 10 + attempt * 5}
-    )
+    # 🔥 detect broad queries
+    is_broad = "reports" in query.lower()
 
-    retrieved_docs = retriever.invoke(query)
-    context = "\n\n".join([doc.page_content for doc in retrieved_docs])
+    for attempt in range(max_attempts):
+
+        retriever = vectorstore.as_retriever(
+            search_kwargs={"k": 10 + attempt * 5}
+        )
+
+        retrieved_docs = retriever.invoke(query)
+
+        if not retrieved_docs:
+            continue
+
+        context = "\n\n".join([doc.page_content for doc in retrieved_docs])
+
+        # ===============================
+        # GENERATE
+        # ===============================
+        prompt = f"""
+        Answer ONLY using the provided context.
+
+        - Do NOT guess.
+        - If not found, say nothing useful.
+
+        Context:
+        {context}
+
+        Question:
+        {query}
+        """
+
+        response = llm.invoke(prompt)
+        answer = response.content.strip()
+
+        # store for aggregation
+        all_answers.append(answer)
+
+        # ===============================
+        # VALIDATE
+        # ===============================
+        check_prompt = f"""
+        Is the answer supported by the context?
+
+        Respond ONLY with YES or NO.
+
+        Context:
+        {context}
+
+        Answer:
+        {answer}
+        """
+
+        check = llm.invoke(check_prompt).content.strip()
+
+        # 🔥 keyword match guard
+        query_words = [w for w in query.lower().split() if len(w) > 3]
+        match_count = sum(word in context.lower() for word in query_words)
+
+        if (
+            check == "YES"
+            and answer
+            and (match_count >= 1 or is_broad)
+        ):
+            final_docs = retrieved_docs
+            is_grounded = True
+
+            # stop early for specific queries
+            if not is_broad:
+                final_answer = answer
+                break
 
     # ===============================
-    # GENERATE
+    # AGGREGATE (ONLY FOR BROAD)
     # ===============================
-    prompt = f"""
-    You are a helpful assistant.
+    if is_broad:
+        combined = "\n".join(all_answers)
 
-    Answer the question using ONLY the context below.
+        seen = set()
+        lines = []
 
-    If the context contains partial information, provide the best possible answer.
+        for line in combined.split("\n"):
+            clean = line.strip()
+            if clean and clean not in seen:
+                lines.append(clean)
+                seen.add(clean)
 
-    If the context is not sufficient, respond with:
-    "Answer not fully available in the retrieved context."
-
-    Do NOT make up information.
-
-    Context:
-    {context}
-
-    Question:
-    {query}
-    """
-
-    response = llm.invoke(prompt)
-    answer = response.content.strip()
+        final_answer = "\n".join(lines)
 
     # ===============================
-    # CLEAN (DEDUP BY GOAL)
+    # REMOVE DUPLICATE SOURCES
     # ===============================
-    cleaned_lines = []
-    seen = set()
+    unique_sources = {}
 
-    for line in answer.split("\n"):
-        key = line.split(":")[0].strip()
+    for doc in final_docs:
+        src = doc.metadata.get("source", "")
+        if src not in unique_sources:
+            unique_sources[src] = doc
 
-        if key not in seen:
-            cleaned_lines.append(line)
-            seen.add(key)
-
-    answer = "\n".join(cleaned_lines)
-
-    # Store answer for aggregation
-    all_answers.append(answer)
+    clean_docs = list(unique_sources.values())[:4]
 
     # ===============================
-    # EVALUATE (RELAXED)
+    # FINAL RESPONSE
     # ===============================
-    check_prompt = f"""
-    Check if the answer is reasonably supported by the context.
-
-    If the answer is relevant and mostly based on the context, respond YES.
-
-    If the answer is completely unrelated or fabricated, respond NO.
-
-    Context:
-    {context}
-
-    Answer:
-    {answer}
-
-    Respond ONLY with YES or NO.
-    """
-
-    check = llm.invoke(check_prompt).content.strip()
-
-    print("Answer:", answer)
-    print("Grounded:", check)
-
-    # ===============================
-    # DECISION
-    # ===============================
-    if check == "YES" and "not found" not in answer.lower():
-        final_docs = retrieved_docs
-        is_grounded = True  # 🔥 CRITICAL FIX
-        break
-
-    print("⚠️ Not grounded → refining retrieval...")
-
-# ===============================
-# FINAL AGGREGATION
-# ===============================
-combined_answer = "\n".join(all_answers)
-
-cleaned_lines = []
-seen = set()
-
-for line in combined_answer.split("\n"):
-    key = line.split(":")[0].strip()
-
-    if key not in seen:
-        cleaned_lines.append(line)
-        seen.add(key)
-
-final_answer = "\n".join(cleaned_lines)
-
-# ===============================
-# FINAL OUTPUT (FIXED)
-# ===============================
-print("\n======================")
-print("FINAL ANSWER")
-print("======================")
-
-if final_answer.strip() and is_grounded:
-    print(final_answer)
-    print("\nGrounded: YES")
-else:
-    print("Answer not fully supported by the retrieved documents.")
-    print("\nGrounded: NO")
-
-# ===============================
-# SOURCES
-# ===============================
-print("\n--- Sources ---")
-for doc in final_docs:
-    source = doc.metadata.get("source", "Unknown")
-    page = doc.metadata.get("page", "N/A")
-
-    print(f"[Source: {source}, Page: {page}]")
-    print(doc.page_content[:200], "...\n")
+    if final_answer and is_grounded:
+        return {
+            "answer": final_answer,
+            "sources": clean_docs,
+            "status": "grounded",
+            "confidence": 0.85
+        }
+    else:
+        return {
+            "answer": "The answer is not in the provided documents.",
+            "sources": [],
+            "status": "refusal",
+            "confidence": 0.0
+        }
