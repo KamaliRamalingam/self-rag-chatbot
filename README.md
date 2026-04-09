@@ -1,124 +1,96 @@
-# Retrieval-Augmented Generation (RAG) Chatbot with Hallucination Detection
+# Self-RAG Chatbot
+
+A Retrieval-Augmented Generation (RAG) chatbot built using LangChain and Streamlit. The system answers questions based on a local document collection while ensuring responses are grounded in retrieved context and avoiding hallucinations.
 
 ## Overview
-This project implements a Retrieval-Augmented Generation (RAG) system that combines document retrieval with a language model to generate accurate and context-aware answers.
 
-It demonstrates a simple, production-style approach to building reliable AI systems.
-
-A validation layer is included to detect whether responses are grounded in retrieved context, reducing hallucinations and improving reliability.
-
----
+This project implements a document question-answering system that combines vector search with language models. It retrieves relevant content from a document store and generates answers strictly based on that context. If the answer is not supported by the documents, the system explicitly refuses to respond.
 
 ## Features
-- Semantic search using vector embeddings (ChromaDB)
-- Context-aware answer generation using OpenAI
-- Hallucination detection (grounded vs not grounded)
-- Command-line interface for interaction
-- Extensible to multiple document formats
 
----
+- Document-based question answering using vector search
+- Grounded response generation with self-evaluation
+- Hallucination prevention through validation checks
+- Adaptive retrieval strategy:
+  - Broad queries aggregate information across documents
+  - Specific queries return focused answers
+- Source attribution with document references
+- Interactive web interface using Streamlit
 
-## Architecture
+## Technology Stack
 
-User Query  
-↓  
-Retriever (Vector Store)  
-↓  
-Context Retrieval  
-↓  
-LLM Answer Generation  
-↓  
-Validation (Hallucination Check)
-
-
-## Tech Stack
 - Python
 - LangChain
-- OpenAI API
-- ChromaDB
-- python-dotenv
-
----
+- OpenAI (Embeddings and LLM)
+- Chroma (Vector Database)
+- Streamlit
 
 ## Project Structure
 
-rag-app/
-│
-├── app.py              # CLI RAG application
-├── data/               # Input documents
-│   └── sample.txt
-├── .env                # API keys (not committed)
-├── .gitignore
-└── README.md
+ragapp/
+│── app.py          # RAG pipeline (retrieval, generation, validation)
+│── ui.py           # Streamlit interface
+│── data/           # Input documents
+│── db/             # Vector database (generated locally)
+│── .gitignore
 
----
+## Setup Instructions
 
-## Setup
+1. Clone the repository
 
-### 1. Clone the repository
-git clone <your-repo-url>
-cd rag-app
+git clone https://github.com/KamaliRamalingam/ragapp.git
+cd ragapp
 
-### 2. Create virtual environment
-python3.10 -m venv venv
+2. Create a virtual environment
+
+python -m venv venv
 source venv/bin/activate
 
-### 3. Install dependencies
-pip install langchain openai chromadb python-dotenv langchain-community langchain-openai
+3. Install dependencies
 
-### 4. Add API key
+pip install -r requirements.txt
 
-Create a `.env` file in the root directory:
+4. Configure environment variables
+
+Create a .env file and add:
 
 OPENAI_API_KEY=your_api_key_here
 
----
+5. Run the application
 
-## Running the Application
+streamlit run ui.py
 
-python app.py
+## Example Queries
 
----
+- What is the purpose of the DOT 2022 report?
+- What are the main strategic goals mentioned in the reports?
+- Who is Elon Musk? (expected to return a refusal)
 
-## Example
+## System Workflow
 
-Input:
-What is Lennart?
+1. Documents are loaded and split into smaller chunks
+2. Each chunk is converted into embeddings and stored in a vector database
+3. A user query retrieves relevant document chunks
+4. The language model generates an answer based on retrieved context
+5. A validation step checks whether the answer is supported by the context
+6. The system either:
+   - Returns a grounded answer with sources
+   - Refuses to answer if insufficient information is available
 
-Output:
-Answer: Lennart is a platform that helps companies access their internal knowledge.
-Grounded: YES
+## Key Design Decisions
 
----
-
-## Hallucination Detection
-
-The system validates whether the generated answer is supported by retrieved context:
-
-- YES → Answer is grounded in the data  
-- NO → Answer is not supported (potential hallucination)  
-
----
-
-## Key Learnings
-- Built an end-to-end RAG pipeline  
-- Integrated vector search with LLMs  
-- Implemented validation to reduce hallucinations  
-
----
-
-## Security
-- API keys are stored in `.env`
-- `.env` is excluded via `.gitignore`
-
----
+- Validation step ensures answers are grounded in retrieved context
+- Keyword overlap check improves relevance filtering
+- Adaptive retrieval balances precision and recall
+- Source deduplication prevents misleading multiple citations
 
 ## Future Improvements
-- Add chatbot UI (Streamlit)
-- Support PDF and multiple documents
-- Add conversation memory
 
----
+- Improved retrieval ranking (reranking models)
+- Multi-step reasoning across documents
+- Streaming responses
+- Deployment to cloud platforms
 
-## Conclusion
-This project demonstrates how to build a reliable and explainable AI system using RAG, ensuring responses are grounded in real data rather than generated assumptions.
+## Author
+
+Kamali Ramalingam
