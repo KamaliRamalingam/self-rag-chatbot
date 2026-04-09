@@ -38,29 +38,35 @@ ragapp/
 
 ## Setup Instructions
 
-1. Clone the repository
-
+### 1. Clone the repository
+```bash
 git clone https://github.com/KamaliRamalingam/ragapp.git
 cd ragapp
+```
 
-2. Create a virtual environment
-
+### 2. Create a virtual environment
+```bash
 python -m venv venv
 source venv/bin/activate
+```
 
-3. Install dependencies
-
+### 3. Install dependencies
+```bash
 pip install -r requirements.txt
+```
 
-4. Configure environment variables
+### 4. Configure environment variables
 
-Create a .env file and add:
+Create a `.env` file and add:
 
+```
 OPENAI_API_KEY=your_api_key_here
+```
 
-5. Run the application
-
+### 5. Run the application
+```bash
 streamlit run ui.py
+```
 
 ## Example Queries
 
