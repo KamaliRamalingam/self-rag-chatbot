@@ -1,3 +1,12 @@
+> **Solo project · AMRT RAG technical assessment · April 2026 · Built in 8 hours**
+>
+> The brief: build an LLM system that answers questions over documents, with at
+> minimum a retrieval step, a generation step and a hallucination-detection step.
+> This solution adds adaptive retrieval, source attribution, confidence scoring and
+> a Streamlit chat interface.
+
+---
+
 # Self-RAG Chatbot
 
 A Retrieval-Augmented Generation (RAG) chatbot built using LangChain and Streamlit. The system answers questions based on a local document collection while ensuring responses are grounded in retrieved context and avoiding hallucinations.
@@ -28,7 +37,7 @@ This project implements a document question-answering system that combines vecto
 ## Project Structure
 
 ```
-ragapp/
+self-rag-chatbot/
 ├── app.py        # RAG pipeline (retrieval, generation, validation)
 ├── ui.py         # Streamlit interface
 ├── data/         # Input documents
@@ -40,8 +49,8 @@ ragapp/
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/KamaliRamalingam/ragapp.git
-cd ragapp
+git clone https://github.com/KamaliRamalingam/self-rag-chatbot.git
+cd self-rag-chatbot
 ```
 
 ### 2. Create a virtual environment
