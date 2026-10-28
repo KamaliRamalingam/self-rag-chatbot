@@ -1,4 +1,4 @@
-> **Solo project · AMRT RAG technical assessment · April 2026 · Built in 8 hours**
+> **AMRT RAG technical assessment · April 2026 · Solo · Built in 8 hours**
 >
 > The brief: build an LLM system that answers questions over documents, with at
 > minimum a retrieval step, a generation step and a hallucination-detection step.
