@@ -1,9 +1,9 @@
-> **AMRT RAG technical assessment · April 2026 · Solo · Built in 8 hours**
->
-> The brief: build an LLM system that answers questions over documents, with at
-> minimum a retrieval step, a generation step and a hallucination-detection step.
-> This solution adds adaptive retrieval, source attribution, confidence scoring and
-> a Streamlit chat interface.
+**AMRT RAG technical assessment · April 2026 · Solo · Built in 8 hours**
+
+The brief: build an LLM system that answers questions over documents, with at
+minimum a retrieval step, a generation step and a hallucination-detection step.
+This solution adds adaptive retrieval, source attribution, confidence scoring and
+a Streamlit chat interface.
 
 ---
 
